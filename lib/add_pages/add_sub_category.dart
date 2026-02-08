@@ -25,10 +25,36 @@ class _AddSubcategoryPageState extends State<AddSubcategoryPage> {
   String? _selectedCategoryId;
 
   // Dummy categories list (replace with API call if needed)
-  final List<Map<String, String>> _categories = [
-    {'id': '6987f48614a0af052968555d', 'name': 'Necklaces'},
-    {'id': '69882f25f5f6b9bdd9610ded', 'name': 'Rings'},
-  ];
+  List<Map<String, dynamic>> _categories = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchCategories();
+  }
+
+// Fetch categories from API
+  Future<void> _fetchCategories() async {
+    const url = 'https://jewellery-backend-icja.onrender.com/api/categories/';
+    try {
+      final response = await http.get(Uri.parse(url));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final cats = List<Map<String, dynamic>>.from(data['categories'] ?? []);
+        setState(() {
+          _categories = cats;
+          // Set default selected category if none chosen
+          if (_categories.isNotEmpty) {
+            _selectedCategoryId = _categories[0]['_id'].toString();
+          }
+        });
+      } else {
+        print('Failed to fetch categories: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error fetching categories: $e');
+    }
+  }
 
   Future<void> _pickImage() async {
     try {
@@ -131,12 +157,14 @@ class _AddSubcategoryPageState extends State<AddSubcategoryPage> {
             // Category dropdown
             DropdownButtonFormField<String>(
               value: _selectedCategoryId,
-              items: _categories.map((cat) {
-                return DropdownMenuItem(
-                  value: cat['id'],
-                  child: Text(cat['name']!),
+              items: _categories.isNotEmpty
+                  ? _categories.map((cat) {
+                return DropdownMenuItem<String>(
+                  value: cat['_id'].toString(),
+                  child: Text(cat['name'] ?? ''),
                 );
-              }).toList(),
+              }).toList()
+                  : [], // empty while loading
               onChanged: (val) => setState(() => _selectedCategoryId = val),
               decoration: const InputDecoration(
                 labelText: 'Select Category',
