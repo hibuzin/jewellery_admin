@@ -1,9 +1,8 @@
 import 'dart:convert';
-import 'dart:typed_data';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -15,264 +14,378 @@ class AddProductPage extends StatefulWidget {
 }
 
 class _AddProductPageState extends State<AddProductPage> {
-  final TextEditingController _titleController = TextEditingController();
-  final TextEditingController _priceController = TextEditingController();
-  final TextEditingController _gramController = TextEditingController();
-  final TextEditingController _descriptionController = TextEditingController();
-  final TextEditingController _quantityController = TextEditingController();
+  final _title = TextEditingController();
+  final _originalPrice = TextEditingController();
+  final _price = TextEditingController();
+  final _gram = TextEditingController();
+  final _description = TextEditingController();
+  final _quantity = TextEditingController();
 
   final ImagePicker _picker = ImagePicker();
-  XFile? _mobileImage;
-  Uint8List? _webImageBytes;
-  String? _webImageName;
-  bool _isLoading = false;
-  String? _selectedCategoryId;
-  String? _selectedSubcategoryId;
-  List<Map<String, dynamic>> _categories = [];
-  List<Map<String, dynamic>> _subcategories = [];
 
+  XFile? _mainImage;
+  List<XFile> _extraImages = [];
+
+  bool _loading = false;
+
+  String? _categoryId;
+  String? _subcategoryId;
+
+  List categories = [];
+  List subcategories = [];
+
+  final String baseUrl =
+      "https://jewellery-backend-icja.onrender.com/api";
 
   @override
   void initState() {
     super.initState();
-    _fetchCategories();
-    _fetchSubcategories();
+    fetchCategories();
   }
-  // Dummy categories and subcategories (replace with API if needed)
-  Future<void> _fetchCategories() async {
-    const url = 'https://jewellery-backend-icja.onrender.com/api/categories/';
-    try {
-      final response = await http.get(Uri.parse(url));
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final cats = List<Map<String, dynamic>>.from(data['categories'] ?? []);
-        setState(() {
-          _categories = cats;
-        });
-      }
-    } catch (e) {
-      print('Error fetching categories: $e');
+
+  // ================= FETCH DATA =================
+
+  Future<void> fetchCategories() async {
+    final res = await http.get(Uri.parse("$baseUrl/categories/"));
+    if (res.statusCode == 200) {
+      final data = jsonDecode(res.body);
+      setState(() => categories = data["categories"]);
     }
   }
 
-  Future<void> _fetchSubcategories() async {
-    const url = 'https://jewellery-backend-icja.onrender.com/api/subcategories/';
-    try {
-      final response = await http.get(Uri.parse(url));
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final subs = List<Map<String, dynamic>>.from(data['subcategories'] ?? []);
-        setState(() {
-          _subcategories = subs;
-        });
-      }
-    } catch (e) {
-      print('Error fetching subcategories: $e');
+  Future<void> fetchSubcategoriesByCategory(String categoryId) async {
+    final res = await http.get(Uri.parse("$baseUrl/subcategories/"));
+
+    if (res.statusCode == 200) {
+      final data = jsonDecode(res.body);
+
+      final allSubs = data["subcategories"];
+
+      setState(() {
+        subcategories = allSubs
+            .where((sub) =>
+        sub["category"] != null &&
+            sub["category"]["_id"].toString() == categoryId)
+            .toList();
+      });
     }
   }
 
-  Future<void> _pickImage() async {
-    try {
-      final picked = await _picker.pickImage(source: ImageSource.gallery);
-      if (picked != null) {
-        if (kIsWeb) {
-          final bytes = await picked.readAsBytes();
-          setState(() {
-            _webImageBytes = bytes;
-            _webImageName = picked.name;
-          });
-        } else {
-          setState(() {
-            _mobileImage = picked;
-          });
-        }
-      }
-    } catch (e) {
-      print('Error picking image: $e');
+  // ================= IMAGE PICK =================
+
+  Future<void> pickMainImage() async {
+    final img = await _picker.pickImage(source: ImageSource.gallery);
+    if (img != null) {
+      setState(() => _mainImage = img);
     }
   }
 
-  Future<void> _addProduct() async {
-    if (_titleController.text.isEmpty ||
-        _priceController.text.isEmpty ||
-        _gramController.text.isEmpty ||
-        _descriptionController.text.isEmpty ||
-        _quantityController.text.isEmpty ||
-        _selectedCategoryId == null ||
-        _selectedSubcategoryId == null) return;
+  Future<void> pickExtraImages() async {
+    final imgs = await _picker.pickMultiImage();
 
-    if (!kIsWeb && _mobileImage == null) return;
-    if (kIsWeb && _webImageBytes == null) return;
+    if (imgs.isNotEmpty) {
+      setState(() {
+        _extraImages.addAll(imgs); // IMPORTANT: append
+      });
 
-    setState(() => _isLoading = true);
+      print("Total extra images: ${_extraImages.length}");
+    }
+  }
 
-    const url = 'https://jewellery-backend-icja.onrender.com/api/products';
+  // ================= ADD PRODUCT =================
+
+  Future<void> addProduct() async {
+    if (_mainImage == null) {
+      showMsg("Select Main Image");
+      return;
+    }
+
+    setState(() => _loading = true);
 
     try {
-      // Get token from SharedPreferences
       final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('auth_token'); // make sure token is saved during login
+      final token = prefs.getString("auth_token");
 
-      final request = http.MultipartRequest('POST', Uri.parse(url));
+      final request = http.MultipartRequest(
+        "POST",
+        Uri.parse("$baseUrl/products/"),
+      );
 
-      request.fields['title'] = _titleController.text;
-      request.fields['price'] = _priceController.text;
-      request.fields['gram'] = _gramController.text;
-      request.fields['description'] = _descriptionController.text;
-      request.fields['quantity'] = _quantityController.text;
-      request.fields['category'] = _selectedCategoryId!;
-      request.fields['subcategory'] = _selectedSubcategoryId!;
+      // -------- TEXT FIELDS --------
+      request.fields.addAll({
+        "title": _title.text,
+        "category": _categoryId ?? "",
+        "subcategory": _subcategoryId ?? "",
+        "originalPrice": _originalPrice.text,
+        "price": _price.text,
+        "gram": _gram.text,
+        "description": _description.text,
+        "quantity": _quantity.text,
+      });
 
-      if (kIsWeb && _webImageBytes != null && _webImageName != null) {
-        request.files.add(http.MultipartFile.fromBytes(
-          'image',
-          _webImageBytes!,
-          filename: _webImageName!,
-        ));
-      } else if (_mobileImage != null) {
-        request.files.add(await http.MultipartFile.fromPath(
-          'image',
-          _mobileImage!.path,
-        ));
-      }
+      // -------- MAIN IMAGE --------
+      await addImageToRequest(
+        request,
+        field: "mainImage",
+        file: _mainImage!,
+      );
 
-      // Add Authorization header if token exists
-      if (token != null) {
-        request.headers['Authorization'] = 'Bearer $token';
-      }
-
-      final streamedResponse = await request.send();
-      final response = await http.Response.fromStream(streamedResponse);
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final data = jsonDecode(response.body);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(data['message'] ?? 'Product added successfully')),
+      // -------- EXTRA IMAGES MULTIPLE --------
+      for (var img in _extraImages) {
+        await addImageToRequest(
+          request,
+          field: "images", // IMPORTANT: same field name repeat
+          file: img,
         );
+      }
+
+      print("Total files sending: ${request.files.length}");
+
+      // -------- TOKEN --------
+      if (token != null) {
+        request.headers["Authorization"] = "Bearer $token";
+      }
+
+      final response = await request.send();
+      final res = await http.Response.fromStream(response);
+
+      print(res.statusCode);
+      print(res.body);
+
+      if (res.statusCode == 200 || res.statusCode == 201) {
+        showMsg("✅ Product Added Successfully");
         Navigator.pop(context);
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to add product: ${response.body}')),
-        );
+        showMsg(res.body);
       }
     } catch (e) {
-      print('Error: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
+      showMsg("Error: $e");
+    }
+
+    setState(() => _loading = false);
+  }
+
+  // ================= IMAGE HELPER =================
+
+  Future<void> addImageToRequest(
+      http.MultipartRequest request, {
+        required String field,
+        required XFile file,
+      }) async {
+    if (kIsWeb) {
+      final bytes = await file.readAsBytes();
+
+      request.files.add(
+        http.MultipartFile.fromBytes(
+          field,
+          bytes,
+          filename: file.name,
+        ),
       );
-    } finally {
-      setState(() => _isLoading = false);
+    } else {
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          field,
+          file.path,
+        ),
+      );
     }
   }
+
+  // ================= UI HELPERS =================
+
+  void showMsg(String msg) {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(msg)));
+  }
+
+  Widget input(TextEditingController c, String label,
+      {TextInputType? type}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 18),
+      child: TextField(
+        controller: c,
+        keyboardType: type,
+        decoration: InputDecoration(
+          labelText: label,
+          filled: true,
+          fillColor: Colors.grey.shade100,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget imagePreview() {
+    if (_mainImage == null) {
+      return const Text("No Image Selected");
+    }
+
+    if (kIsWeb) {
+      return Image.network(_mainImage!.path, height: 150);
+    }
+
+    return Image.file(File(_mainImage!.path), height: 150);
+  }
+
+  Widget extraImagesPreview() {
+    if (_extraImages.isEmpty) return const SizedBox();
+
+    return SizedBox(
+      height: 110,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: _extraImages.length,
+        itemBuilder: (context, index) {
+          final img = _extraImages[index];
+
+          return Stack(
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(right: 10),
+                child: kIsWeb
+                    ? Image.network(img.path, height: 100)
+                    : Image.file(File(img.path), height: 100),
+              ),
+              Positioned(
+                right: 4,
+                top: 4,
+                child: GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _extraImages.removeAt(index);
+                    });
+                  },
+                  child: const CircleAvatar(
+                    radius: 12,
+                    backgroundColor: Colors.red,
+                    child: Icon(Icons.close,
+                        size: 14, color: Colors.white),
+                  ),
+                ),
+              )
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  // ================= UI =================
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Add Product')),
+      appBar: AppBar(
+        title: const Text("Add Product"),
+        elevation: 0,
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            TextField(
-              controller: _titleController,
+            input(_title, "Title"),
+            input(_originalPrice, "Original Price",
+                type: TextInputType.number),
+            input(_price, "Sale Price", type: TextInputType.number),
+            input(_gram, "Gram", type: TextInputType.number),
+            input(_quantity, "Quantity",
+                type: TextInputType.number),
+            input(_description, "Description"),
+
+            DropdownButtonFormField<String>(
+              value: _categoryId,
+              items: categories
+                  .map<DropdownMenuItem<String>>(
+                    (c) => DropdownMenuItem(
+                  value: c["_id"].toString(),
+                  child: Text(c["name"]),
+                ),
+              )
+                  .toList(),
+              onChanged: (v) {
+                setState(() {
+                  _categoryId = v;
+                  _subcategoryId = null; // reset
+                  subcategories = [];
+                });
+
+                if (v != null) {
+                  fetchSubcategoriesByCategory(v);
+                }
+              },
               decoration: const InputDecoration(
-                labelText: 'Product Name',
+                labelText: "Category",
                 border: OutlineInputBorder(),
               ),
             ),
-            const SizedBox(height: 20),
-            TextField(
-              controller: _priceController,
+
+            const SizedBox(height: 18),
+
+            DropdownButtonFormField<String>(
+              value: _subcategoryId,
+              items: subcategories
+                  .map<DropdownMenuItem<String>>(
+                    (s) => DropdownMenuItem(
+                  value: s["_id"].toString(),
+                  child: Text(s["name"]),
+                ),
+              )
+                  .toList(),
+              onChanged: (v) => setState(() => _subcategoryId = v),
               decoration: const InputDecoration(
-                labelText: 'Price',
-                border: OutlineInputBorder(),
-              ),
-              keyboardType: TextInputType.number,
-            ),
-            const SizedBox(height: 20),
-            TextField(
-              controller: _gramController,
-              decoration: const InputDecoration(
-                labelText: 'Gram',
-                border: OutlineInputBorder(),
-              ),
-              keyboardType: TextInputType.number,
-            ),
-            const SizedBox(height: 20),
-            TextField(
-              controller: _descriptionController,
-              decoration: const InputDecoration(
-                labelText: 'Description',
+                labelText: "Subcategory",
                 border: OutlineInputBorder(),
               ),
             ),
-            const SizedBox(height: 20),
-            TextField(
-              controller: _quantityController,
-              decoration: const InputDecoration(
-                labelText: 'Quantity',
-                border: OutlineInputBorder(),
-              ),
-              keyboardType: TextInputType.number,
-            ),
+
             const SizedBox(height: 20),
 
-            // Category Dropdown
-            DropdownButtonFormField<String>(
-              value: _selectedCategoryId,
-              items: _categories
-                  .map((cat) => DropdownMenuItem<String>(
-                value: cat['_id'].toString(), // CAST TO STRING
-                child: Text(cat['name'] ?? ''),
-              ))
-                  .toList(),
-              onChanged: (val) => setState(() => _selectedCategoryId = val),
-              decoration: const InputDecoration(
-                labelText: 'Select Category',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            SizedBox(height: 20,),
-            DropdownButtonFormField<String>(
-              value: _selectedSubcategoryId,
-              items: _subcategories
-                  .map((sub) => DropdownMenuItem<String>(
-                value: sub['_id'].toString(), // CAST TO STRING
-                child: Text(sub['name'] ?? ''),
-              ))
-                  .toList(),
-              onChanged: (val) => setState(() => _selectedSubcategoryId = val),
-              decoration: const InputDecoration(
-                labelText: 'Select Subcategory',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // Image picker
-            (_mobileImage != null || _webImageBytes != null)
-                ? kIsWeb
-                ? Image.memory(_webImageBytes!, height: 150)
-                : Image.file(File(_mobileImage!.path), height: 150)
-                : const SizedBox(height: 150, child: Center(child: Text('No image selected'))),
+            imagePreview(),
             const SizedBox(height: 10),
-            ElevatedButton.icon(
-              onPressed: _pickImage,
-              icon: const Icon(Icons.image),
-              label: const Text('Select Image'),
-            ),
-            const SizedBox(height: 20),
 
-            _isLoading
+            ElevatedButton(
+              onPressed: pickMainImage,
+              child: const Text("Select Main Image"),
+            ),
+
+            const SizedBox(height: 10),
+
+            extraImagesPreview(),
+
+            ElevatedButton(
+              onPressed: pickExtraImages,
+              child: const Text("Select Extra Images"),
+            ),
+
+            const SizedBox(height: 30),
+
+            _loading
                 ? const CircularProgressIndicator()
                 : SizedBox(
               width: double.infinity,
               height: 50,
               child: ElevatedButton(
-                onPressed: _addProduct,
-                child: const Text('Add Product', style: TextStyle(fontSize: 18)),
+                onPressed: addProduct,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.black,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                child: const Text(
+                  "Add Product",
+                  style: TextStyle(
+                    fontSize: 16,
+                    letterSpacing: 1,
+                  ),
+                ),
               ),
-            ),
+            )
           ],
         ),
       ),

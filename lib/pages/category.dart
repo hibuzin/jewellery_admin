@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:jewellery_admin/add_pages/add_category.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
+
 
 class CategoryPage extends StatefulWidget {
   const CategoryPage({super.key});
@@ -15,7 +18,7 @@ class _CategoryPageState extends State<CategoryPage> {
   List<Map<String, dynamic>> _categories = [];
   bool _isLoading = true;
   String? _error;
-
+  File? _selectedImage;
 
   @override
   void initState() {
@@ -55,12 +58,61 @@ class _CategoryPageState extends State<CategoryPage> {
     }
   }
 
+  // ================== ADD: UPDATE CATEGORY (PUT) ==================
+  Future<void> _updateCategory(
+      String categoryId,
+      String name,
+      File? image,
+      ) async {
+    final prefs = await SharedPreferences.getInstance();
+    final myToken = prefs.getString('auth_token') ?? '';
+
+    final uri = Uri.parse(
+        'https://jewellery-backend-icja.onrender.com/api/categories/$categoryId');
+
+    try {
+      final request = http.MultipartRequest('PUT', uri);
+
+      request.headers['Authorization'] = 'Bearer $myToken';
+      request.fields['name'] = name;
+
+      // image optional
+      if (image != null) {
+        request.files.add(
+          await http.MultipartFile.fromPath(
+            'image',
+            image.path,
+          ),
+        );
+      }
+
+      final response = await request.send();
+      final responseBody = await response.stream.bytesToString();
+
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Category updated successfully')),
+        );
+        _selectedImage = null;
+        _fetchCategories();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Update failed: $responseBody')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Update error: $e')),
+      );
+    }
+  }
   // DELETE category by id
   Future<void> _deleteCategory(String categoryId) async {
     final prefs = await SharedPreferences.getInstance();
     final myToken = prefs.getString('auth_token') ?? '';
 
-    final url = 'https://jewellery-backend-icja.onrender.com/api/categories/$categoryId';
+    final url =
+        'https://jewellery-backend-icja.onrender.com/api/categories/$categoryId';
     try {
       final response = await http.delete(
         Uri.parse(url),
@@ -74,10 +126,12 @@ class _CategoryPageState extends State<CategoryPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Category deleted successfully')),
         );
-        _fetchCategories(); // Refresh list
+        _fetchCategories();
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to delete category: ${response.statusCode}')),
+          SnackBar(
+              content:
+              Text('Failed to delete category: ${response.statusCode}')),
         );
       }
     } catch (e) {
@@ -92,7 +146,6 @@ class _CategoryPageState extends State<CategoryPage> {
     return Scaffold(
       body: Column(
         children: [
-          // Top Container: Category title + Add Category button
           Container(
             height: 60,
             width: double.infinity,
@@ -117,10 +170,11 @@ class _CategoryPageState extends State<CategoryPage> {
                         builder: (_) => const AddCategoryPage(),
                       ),
                     );
-                    _fetchCategories(); // Refresh list after returning
+                    _fetchCategories();
                   },
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
                       color: Colors.white24,
                       borderRadius: BorderRadius.circular(6),
@@ -143,9 +197,7 @@ class _CategoryPageState extends State<CategoryPage> {
               ],
             ),
           ),
-
           const SizedBox(height: 20),
-
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
@@ -154,16 +206,19 @@ class _CategoryPageState extends State<CategoryPage> {
                 : _categories.isEmpty
                 ? const Center(child: Text('No categories found'))
                 : ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
+              padding:
+              const EdgeInsets.symmetric(horizontal: 20),
               itemCount: _categories.length,
               itemBuilder: (context, index) {
                 final category = _categories[index];
-                final imageUrl = category['image']?['url'] ?? '';
+                final imageUrl =
+                    category['image']?['url'] ?? '';
                 final name = category['name'] ?? '';
                 final categoryId = category['_id'] ?? '';
 
                 return Card(
-                  margin: const EdgeInsets.symmetric(vertical: 8),
+                  margin:
+                  const EdgeInsets.symmetric(vertical: 8),
                   child: ListTile(
                     leading: imageUrl.isNotEmpty
                         ? Image.network(
@@ -174,31 +229,116 @@ class _CategoryPageState extends State<CategoryPage> {
                     )
                         : const Icon(Icons.image),
                     title: Text(name),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.delete, color: Colors.red),
-                      onPressed: () {
-                        // Confirm before deleting
-                        showDialog(
-                          context: context,
-                          builder: (ctx) => AlertDialog(
-                            title: const Text('Delete Category'),
-                            content: const Text('Are you sure you want to delete this category?'),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.of(ctx).pop(),
-                                child: const Text('Cancel'),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // ========= ADD: EDIT =========
+                        IconButton(
+                          icon: const Icon(Icons.edit,
+                              color: Colors.blue),
+                          onPressed: () {
+                            final controller = TextEditingController(text: name);
+
+                            showDialog(
+                              context: context,
+                              builder: (ctx) => StatefulBuilder(
+                                builder: (ctx, setStateDialog) => AlertDialog(
+                                  title: const Text('Edit Category'),
+                                  content: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      GestureDetector(
+                                        onTap: () async {
+                                          final picker = ImagePicker();
+                                          final picked = await picker.pickImage(
+                                            source: ImageSource.gallery,
+                                          );
+
+                                          if (picked != null) {
+                                            setStateDialog(() {
+                                              _selectedImage = File(picked.path);
+                                            });
+                                          }
+                                        },
+                                        child: CircleAvatar(
+                                          radius: 35,
+                                          backgroundImage: _selectedImage != null
+                                              ? FileImage(_selectedImage!)
+                                              : imageUrl.isNotEmpty
+                                              ? NetworkImage(imageUrl) as ImageProvider
+                                              : null,
+                                          child: _selectedImage == null && imageUrl.isEmpty
+                                              ? const Icon(Icons.camera_alt)
+                                              : null,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 10),
+                                      TextField(
+                                        controller: controller,
+                                        decoration:
+                                        const InputDecoration(labelText: 'Category Name'),
+                                      ),
+                                    ],
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () {
+                                        _selectedImage = null;
+                                        Navigator.pop(ctx);
+                                      },
+                                      child: const Text('Cancel'),
+                                    ),
+                                    TextButton(
+                                      onPressed: () {
+                                        Navigator.pop(ctx);
+                                        _updateCategory(
+                                          categoryId,
+                                          controller.text,
+                                          _selectedImage,
+                                        );
+                                      },
+                                      child: const Text('Update'),
+                                    ),
+                                  ],
+                                ),
                               ),
-                              TextButton(
-                                onPressed: () {
-                                  Navigator.of(ctx).pop();
-                                  _deleteCategory(categoryId);
-                                },
-                                child: const Text('Delete', style: TextStyle(color: Colors.red)),
+                            );
+                          },
+                        ),
+                        // ========= DELETE =========
+                        IconButton(
+                          icon: const Icon(Icons.delete,
+                              color: Colors.red),
+                          onPressed: () {
+                            showDialog(
+                              context: context,
+                              builder: (ctx) => AlertDialog(
+                                title: const Text(
+                                    'Delete Category'),
+                                content: const Text(
+                                    'Are you sure you want to delete this category?'),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () =>
+                                        Navigator.of(ctx).pop(),
+                                    child:
+                                    const Text('Cancel'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () {
+                                      Navigator.of(ctx).pop();
+                                      _deleteCategory(categoryId);
+                                    },
+                                    child: const Text('Delete',
+                                        style: TextStyle(
+                                            color: Colors.red)),
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
-                        );
-                      },
+                            );
+                          },
+                        ),
+                      ],
                     ),
                   ),
                 );

@@ -59,17 +59,14 @@ class _AddCategoryPageState extends State<AddCategoryPage> {
 
     const url = 'https://jewellery-backend-icja.onrender.com/api/categories';
     try {
-      // Get token from SharedPreferences
       final prefs = await SharedPreferences.getInstance();
       final myToken = prefs.getString('auth_token') ?? '';
 
       final request = http.MultipartRequest('POST', Uri.parse(url));
-
       request.headers.addAll({
         'Authorization': 'Bearer $myToken',
         'Accept': 'application/json',
       });
-
       request.fields['name'] = _nameController.text;
 
       if (kIsWeb && _webImageBytes != null && _webImageName != null) {
@@ -87,9 +84,37 @@ class _AddCategoryPageState extends State<AddCategoryPage> {
 
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
+
       print('Status: ${response.statusCode}, Body: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        // Show bottom snackbar for success
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Category uploaded successfully!'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+
+        // Clear fields after upload
+        _nameController.clear();
+        setState(() {
+          _mobileImage = null;
+          _webImageBytes = null;
+          _webImageName = null;
+        });
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to upload category: ${response.body}'),
+          ),
+        );
+      }
     } catch (e) {
       print('Error: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
     } finally {
       setState(() => _isLoading = false);
     }
