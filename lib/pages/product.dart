@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart'; // kIsWeb
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:jewellery_admin/add_pages/add_product.dart';
@@ -7,7 +7,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 
-// ── Palette ────────────────────────────────────────────────────────────────
 const _white      = Color(0xFFFFFFFF);
 const _bgPage     = Color(0xFFF8F6F1);
 const _bgCard     = Color(0xFFFFFFFF);
@@ -43,7 +42,6 @@ class _ProductPageState extends State<ProductPage> {
     _fetchProducts();
   }
 
-  // ── API calls ──────────────────────────────────────────────────────────────
   Future<void> _fetchProducts() async {
     try {
       final res = await http.get(Uri.parse(
@@ -113,8 +111,6 @@ class _ProductPageState extends State<ProductPage> {
     req.fields['quantity']      = quantity;
     req.fields['category']      = _selectedCategoryId!;
     req.fields['subcategory']   = _selectedSubcategoryId!;
-
-    // ✅ Use XFile.readAsBytes() — works on both Web and Mobile
     if (mainImage != null) {
       final bytes = await mainImage.readAsBytes();
       req.files.add(http.MultipartFile.fromBytes(
@@ -125,9 +121,8 @@ class _ProductPageState extends State<ProductPage> {
       req.files.add(http.MultipartFile.fromBytes(
           'images', bytes, filename: img.name));
     }
-
     final s = await req.send();
-    print('🟩 UPDATE: ${await s.stream.bytesToString()}');
+    print('UPDATE: ${await s.stream.bytesToString()}');
     _fetchProducts();
   }
 
@@ -152,44 +147,38 @@ class _ProductPageState extends State<ProductPage> {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         backgroundColor: _textDark,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(1)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         content: Text(msg, style: const TextStyle(color: _white)),
       ));
 
-  // ── Web-safe image preview widget ─────────────────────────────────────────
-  // Uses XFile instead of File — works on Web + Mobile both
   Widget _xfilePreview(XFile xfile, {double size = 62}) {
     if (kIsWeb) {
-      // On web: use Image.network with object URL isn't possible directly,
-      // so we use FutureBuilder with bytes
       return FutureBuilder<Uint8List>(
         future: xfile.readAsBytes(),
         builder: (_, snap) {
           if (snap.hasData) {
             return ClipRRect(
-              borderRadius: BorderRadius.circular(1),
+              borderRadius: BorderRadius.circular(10),
               child: Image.memory(snap.data!,
                   width: size, height: size, fit: BoxFit.cover),
             );
           }
           return Container(width: size, height: size,
-              decoration: BoxDecoration(
-                  color: _bgField,
-                  borderRadius: BorderRadius.circular(1)));
+              decoration: BoxDecoration(color: _bgField,
+                  borderRadius: BorderRadius.circular(10)));
         },
       );
     } else {
       return ClipRRect(
-        borderRadius: BorderRadius.circular(1),
+        borderRadius: BorderRadius.circular(10),
         child: Image.file(File(xfile.path),
             width: size, height: size, fit: BoxFit.cover),
       );
     }
   }
 
-  // ── Edit Dialog ────────────────────────────────────────────────────────────
   void _showEditDialog(Map<String, dynamic> product, String imageUrl) {
-    XFile? selectedMainImage;          // ✅ XFile instead of File
+    XFile? selectedMainImage;
     List<XFile> selectedExtraImages = [];
     bool initialized = false;
 
@@ -213,9 +202,10 @@ class _ProductPageState extends State<ProductPage> {
     showDialog(
       context: context,
       barrierColor: Colors.black38,
+      // ✅ KEY FIX: useSafeArea false — we control insets manually
+      useSafeArea: false,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, set) {
-          // ✅ fetch only once
           if (!initialized) {
             initialized = true;
             WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -224,296 +214,299 @@ class _ProductPageState extends State<ProductPage> {
             });
           }
 
-          return Dialog(
-            backgroundColor: Colors.transparent,
-            insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-            child: Container(
-              decoration: BoxDecoration(
-                color: _bgCard,
-                borderRadius: BorderRadius.circular(2),
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.10),
-                    blurRadius: 30, offset: const Offset(0, 8))],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
+          // ✅ KEY FIX: Read keyboard height here inside builder so it rebuilds
+          final keyboardHeight = MediaQuery.of(ctx).viewInsets.bottom;
 
-                  // ── Header ───────────────────────────────────────────
-                  Container(
-                    padding: const EdgeInsets.fromLTRB(20, 16, 16, 16),
-                    decoration: const BoxDecoration(
-                        border: Border(bottom: BorderSide(color: _divider))),
-                    child: Row(children: [
-                      Container(
-                        width: 36, height: 36,
-                        decoration: BoxDecoration(
-                            color: _goldBorder.withOpacity(0.4),
-                            borderRadius: BorderRadius.circular(1)),
-                        child: const Icon(Icons.edit_outlined, color: _gold, size: 18),
-                      ),
-                      const SizedBox(width: 12),
-                      const Text('Edit Product',
-                          style: TextStyle(color: _textDark, fontSize: 16,
-                              fontWeight: FontWeight.w700)),
-                      const Spacer(),
-                      GestureDetector(
-                        onTap: () => Navigator.pop(ctx),
-                        child: Container(
-                          width: 30, height: 30,
-                          decoration: BoxDecoration(color: _bgField,
-                              borderRadius: BorderRadius.circular(1)),
-                          child: const Icon(Icons.close, color: _textSub, size: 16),
-                        ),
-                      ),
-                    ]),
+          return GestureDetector(
+            // ✅ Tap outside keyboard → dismiss keyboard, NOT dialog
+            onTap: () => FocusScope.of(ctx).unfocus(),
+            child: Padding(
+              // ✅ KEY FIX: bottom padding = keyboard height → dialog moves up with keyboard
+              padding: EdgeInsets.only(bottom: keyboardHeight),
+              child: Dialog(
+                backgroundColor: Colors.transparent,
+                insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: _bgCard,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.10),
+                        blurRadius: 30, offset: const Offset(0, 8))],
                   ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
 
-                  // ── Body ─────────────────────────────────────────────
-                  Flexible(
-                    child: SingleChildScrollView(
-                      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-                      padding: EdgeInsets.fromLTRB(
-                        20,
-                        20,
-                        20,
-                        MediaQuery.of(ctx).viewInsets.bottom + 20,
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-
-                          // Main Image
-                          _label('MAIN IMAGE'),
-                          const SizedBox(height: 10),
-                          Center(
-                            child: GestureDetector(
-                              onTap: () async {
-                                final p = await ImagePicker()
-                                    .pickImage(source: ImageSource.gallery);
-                                if (p != null) set(() => selectedMainImage = p);
-                              },
-                              child: Stack(
-                                alignment: Alignment.bottomRight,
-                                children: [
-                                  // ✅ show picked image or existing network image
-                                  Container(
-                                    width: 88, height: 88,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      border: Border.all(color: _goldBorder, width: 2.5),
-                                    ),
-                                    child: ClipOval(
-                                      child: selectedMainImage != null
-                                          ? _xfilePreview(selectedMainImage!, size: 88)
-                                          : Image.network(imageUrl,
-                                          width: 88, height: 88,
-                                          fit: BoxFit.cover),
-                                    ),
-                                  ),
-                                  Container(
-                                    width: 26, height: 26,
-                                    decoration: BoxDecoration(
-                                        color: _gold,
-                                        shape: BoxShape.circle,
-                                        border: Border.all(color: _white, width: 2)),
-                                    child: const Icon(Icons.edit, color: _white, size: 12),
-                                  ),
-                                ],
-                              ),
+                      // Header
+                      Container(
+                        padding: const EdgeInsets.fromLTRB(20, 16, 16, 16),
+                        decoration: const BoxDecoration(
+                            border: Border(bottom: BorderSide(color: _divider))),
+                        child: Row(children: [
+                          Container(
+                            width: 36, height: 36,
+                            decoration: BoxDecoration(
+                                color: _goldBorder.withOpacity(0.4),
+                                borderRadius: BorderRadius.circular(10)),
+                            child: const Icon(Icons.edit_outlined, color: _gold, size: 18),
+                          ),
+                          const SizedBox(width: 12),
+                          const Text('Edit Product',
+                              style: TextStyle(color: _textDark, fontSize: 16,
+                                  fontWeight: FontWeight.w700)),
+                          const Spacer(),
+                          GestureDetector(
+                            onTap: () => Navigator.pop(ctx),
+                            child: Container(
+                              width: 30, height: 30,
+                              decoration: BoxDecoration(color: _bgField,
+                                  borderRadius: BorderRadius.circular(8)),
+                              child: const Icon(Icons.close, color: _textSub, size: 16),
                             ),
                           ),
+                        ]),
+                      ),
 
-                          const SizedBox(height: 20),
+                      // ✅ KEY FIX: Constrained height so keyboard push doesn't
+                      // cause unbounded scroll jump
+                      ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxHeight: MediaQuery.of(ctx).size.height * 0.65,
+                        ),
+                        child: SingleChildScrollView(
+                          // ✅ Drag down on scroll area dismisses keyboard
+                          keyboardDismissBehavior:
+                          ScrollViewKeyboardDismissBehavior.onDrag,
+                          padding: const EdgeInsets.all(20),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
 
-                          // Extra Images
-                          _label('EXTRA IMAGES'),
-                          const SizedBox(height: 10),
-
-                          // Existing server images
-                          if (existingExtras.isNotEmpty)
-                            SizedBox(
-                              height: 66,
-                              child: ListView.builder(
-                                scrollDirection: Axis.horizontal,
-                                itemCount: existingExtras.length,
-                                itemBuilder: (_, i) => Padding(
-                                  padding: const EdgeInsets.only(right: 8),
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(1),
-                                    child: Image.network(existingExtras[i],
-                                        width: 62, height: 62, fit: BoxFit.cover),
-                                  ),
-                                ),
-                              ),
-                            ),
-
-                          // Newly picked extra images
-                          if (selectedExtraImages.isNotEmpty) ...[
-                            const SizedBox(height: 8),
-                            SizedBox(
-                              height: 66,
-                              child: ListView.builder(
-                                scrollDirection: Axis.horizontal,
-                                itemCount: selectedExtraImages.length,
-                                itemBuilder: (_, i) => Stack(
-                                  children: [
-                                    Padding(
-                                      padding: const EdgeInsets.only(right: 8),
-
-                                      child: _xfilePreview(selectedExtraImages[i]),
-                                    ),
-                                    Positioned(
-                                      top: 0, right: 4,
-                                      child: GestureDetector(
-                                        onTap: () => set(() =>
-                                            selectedExtraImages.removeAt(i)),
-                                        child: Container(
-                                          width: 18, height: 18,
-                                          decoration: const BoxDecoration(
-                                              color: _red, shape: BoxShape.circle),
-                                          child: const Icon(Icons.close,
-                                              color: _white, size: 11),
+                              // Main Image
+                              _label('MAIN IMAGE'),
+                              const SizedBox(height: 10),
+                              Center(
+                                child: GestureDetector(
+                                  onTap: () async {
+                                    final p = await ImagePicker()
+                                        .pickImage(source: ImageSource.gallery);
+                                    if (p != null) set(() => selectedMainImage = p);
+                                  },
+                                  child: Stack(
+                                    alignment: Alignment.bottomRight,
+                                    children: [
+                                      Container(
+                                        width: 88, height: 88,
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          border: Border.all(color: _goldBorder, width: 2.5),
+                                        ),
+                                        child: ClipOval(
+                                          child: selectedMainImage != null
+                                              ? _xfilePreview(selectedMainImage!, size: 88)
+                                              : Image.network(imageUrl,
+                                              width: 88, height: 88,
+                                              fit: BoxFit.cover),
                                         ),
                                       ),
-                                    ),
-                                  ],
+                                      Container(
+                                        width: 26, height: 26,
+                                        decoration: BoxDecoration(
+                                            color: _gold, shape: BoxShape.circle,
+                                            border: Border.all(color: _white, width: 2)),
+                                        child: const Icon(Icons.edit, color: _white, size: 12),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
-                            ),
-                          ],
 
-                          const SizedBox(height: 10),
-                          OutlinedButton.icon(
-                            onPressed: () async {
-                              final picked = await ImagePicker().pickMultiImage();
-                              if (picked.isNotEmpty)
-                                set(() => selectedExtraImages.addAll(picked));
-                            },
-                            icon: const Icon(Icons.add_photo_alternate_outlined,
-                                size: 16, color: _gold),
-                            label: const Text('Add Extra Images',
-                                style: TextStyle(color: _gold, fontSize: 13)),
-                            style: OutlinedButton.styleFrom(
-                              side: const BorderSide(color: _goldBorder),
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(1)),
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 14, vertical: 10),
-                            ),
+                              const SizedBox(height: 20),
+                              _label('EXTRA IMAGES'),
+                              const SizedBox(height: 10),
+
+                              if (existingExtras.isNotEmpty)
+                                SizedBox(
+                                  height: 66,
+                                  child: ListView.builder(
+                                    scrollDirection: Axis.horizontal,
+                                    itemCount: existingExtras.length,
+                                    itemBuilder: (_, i) => Padding(
+                                      padding: const EdgeInsets.only(right: 8),
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(10),
+                                        child: Image.network(existingExtras[i],
+                                            width: 62, height: 62, fit: BoxFit.cover),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+
+                              if (selectedExtraImages.isNotEmpty) ...[
+                                const SizedBox(height: 8),
+                                SizedBox(
+                                  height: 66,
+                                  child: ListView.builder(
+                                    scrollDirection: Axis.horizontal,
+                                    itemCount: selectedExtraImages.length,
+                                    itemBuilder: (_, i) => Stack(children: [
+                                      Padding(
+                                        padding: const EdgeInsets.only(right: 8),
+                                        child: _xfilePreview(selectedExtraImages[i]),
+                                      ),
+                                      Positioned(
+                                        top: 0, right: 4,
+                                        child: GestureDetector(
+                                          onTap: () => set(() =>
+                                              selectedExtraImages.removeAt(i)),
+                                          child: Container(
+                                            width: 18, height: 18,
+                                            decoration: const BoxDecoration(
+                                                color: _red, shape: BoxShape.circle),
+                                            child: const Icon(Icons.close,
+                                                color: _white, size: 11),
+                                          ),
+                                        ),
+                                      ),
+                                    ]),
+                                  ),
+                                ),
+                              ],
+
+                              const SizedBox(height: 10),
+                              OutlinedButton.icon(
+                                onPressed: () async {
+                                  final picked = await ImagePicker().pickMultiImage();
+                                  if (picked.isNotEmpty)
+                                    set(() => selectedExtraImages.addAll(picked));
+                                },
+                                icon: const Icon(Icons.add_photo_alternate_outlined,
+                                    size: 16, color: _gold),
+                                label: const Text('Add Extra Images',
+                                    style: TextStyle(color: _gold, fontSize: 13)),
+                                style: OutlinedButton.styleFrom(
+                                  side: const BorderSide(color: _goldBorder),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10)),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 14, vertical: 10),
+                                ),
+                              ),
+
+                              const SizedBox(height: 20),
+                              _field('TITLE', titleCtrl),
+                              const SizedBox(height: 14),
+
+                              _label('CATEGORY'),
+                              const SizedBox(height: 8),
+                              _isCategoryLoading
+                                  ? _miniLoader()
+                                  : _dropdown(
+                                value: _selectedCategoryId,
+                                hint: 'Select Category',
+                                items: _categories.map((c) => DropdownMenuItem(
+                                    value: c['_id'].toString(),
+                                    child: Text(c['name'].toString()))).toList(),
+                                onChanged: (val) {
+                                  set(() {
+                                    _selectedCategoryId = val;
+                                    _selectedSubcategoryId = null;
+                                    _subcategoriesList = [];
+                                  });
+                                  _fetchSubcategoriesByCategory(val!, set);
+                                },
+                              ),
+
+                              const SizedBox(height: 14),
+                              _label('SUBCATEGORY'),
+                              const SizedBox(height: 8),
+                              _isSubcategoryLoading
+                                  ? _miniLoader()
+                                  : _dropdown(
+                                value: _selectedSubcategoryId,
+                                hint: 'Select Subcategory',
+                                items: _subcategoriesList.map((s) => DropdownMenuItem(
+                                    value: s['_id'].toString(),
+                                    child: Text(s['name'].toString()))).toList(),
+                                onChanged: (val) =>
+                                    set(() => _selectedSubcategoryId = val),
+                              ),
+
+                              const SizedBox(height: 14),
+                              Row(children: [
+                                Expanded(child: _field('PRICE', priceCtrl, isNum: true)),
+                                const SizedBox(width: 12),
+                                Expanded(child: _field('ORIGINAL PRICE', origCtrl, isNum: true)),
+                              ]),
+                              const SizedBox(height: 14),
+                              Row(children: [
+                                Expanded(child: _field('GRAM', gramCtrl, isNum: true)),
+                                const SizedBox(width: 12),
+                                Expanded(child: _field('QUANTITY', qtyCtrl, isNum: true)),
+                              ]),
+                              const SizedBox(height: 14),
+                              _field('DESCRIPTION', descCtrl, maxLines: 3),
+                              const SizedBox(height: 8),
+                            ],
                           ),
-
-                          const SizedBox(height: 20),
-                          _field('TITLE', titleCtrl),
-                          const SizedBox(height: 14),
-
-                          _label('CATEGORY'),
-                          const SizedBox(height: 8),
-                          _isCategoryLoading
-                              ? _miniLoader()
-                              : _dropdown(
-                            value: _selectedCategoryId,
-                            hint: 'Select Category',
-                            items: _categories.map((c) => DropdownMenuItem(
-                                value: c['_id'].toString(),
-                                child: Text(c['name'].toString()))).toList(),
-                            onChanged: (val) {
-                              set(() {
-                                _selectedCategoryId = val;
-                                _selectedSubcategoryId = null;
-                                _subcategoriesList = [];
-                              });
-                              _fetchSubcategoriesByCategory(val!, set);
-                            },
-                          ),
-
-                          const SizedBox(height: 14),
-
-                          _label('SUBCATEGORY'),
-                          const SizedBox(height: 8),
-                          _isSubcategoryLoading
-                              ? _miniLoader()
-                              : _dropdown(
-                            value: _selectedSubcategoryId,
-                            hint: 'Select Subcategory',
-                            items: _subcategoriesList.map((s) => DropdownMenuItem(
-                                value: s['_id'].toString(),
-                                child: Text(s['name'].toString()))).toList(),
-                            onChanged: (val) =>
-                                set(() => _selectedSubcategoryId = val),
-                          ),
-
-                          const SizedBox(height: 14),
-                          Row(children: [
-                            Expanded(child: _field('PRICE', priceCtrl, isNum: true)),
-                            const SizedBox(width: 12),
-                            Expanded(child: _field('ORIGINAL PRICE', origCtrl, isNum: true)),
-                          ]),
-                          const SizedBox(height: 14),
-                          Row(children: [
-                            Expanded(child: _field('GRAM', gramCtrl, isNum: true)),
-                            const SizedBox(width: 12),
-                            Expanded(child: _field('QUANTITY', qtyCtrl, isNum: true)),
-                          ]),
-                          const SizedBox(height: 14),
-                          _field('DESCRIPTION', descCtrl, maxLines: 3),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  // ── Footer ───────────────────────────────────────────
-                  Container(
-                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
-                    decoration: const BoxDecoration(
-                        border: Border(top: BorderSide(color: _divider))),
-                    child: Row(children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () => Navigator.pop(ctx),
-                          style: OutlinedButton.styleFrom(
-                            side: const BorderSide(color: _divider),
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(1)),
-                            padding: const EdgeInsets.symmetric(vertical: 13),
-                          ),
-                          child: const Text('CANCEL',
-                              style: TextStyle(color: _textSub,
-                                  fontWeight: FontWeight.w500)),
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: () {
-                            Navigator.pop(ctx);
-                            _updateProduct(
-                              productId: product['_id'],
-                              title: titleCtrl.text,
-                              price: priceCtrl.text,
-                              originalPrice: origCtrl.text,
-                              gram: gramCtrl.text,
-                              description: descCtrl.text,
-                              quantity: qtyCtrl.text,
-                              mainImage: selectedMainImage,
-                              extraImages: selectedExtraImages,
-                            );
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: _gold,
-                            foregroundColor: _white,
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(1)),
-                            padding: const EdgeInsets.symmetric(vertical: 13),
+
+                      // Footer
+                      Container(
+                        padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+                        decoration: const BoxDecoration(
+                            border: Border(top: BorderSide(color: _divider))),
+                        child: Row(children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () => Navigator.pop(ctx),
+                              style: OutlinedButton.styleFrom(
+                                side: const BorderSide(color: _divider),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10)),
+                                padding: const EdgeInsets.symmetric(vertical: 13),
+                              ),
+                              child: const Text('CANCEL',
+                                  style: TextStyle(color: _textSub,
+                                      fontWeight: FontWeight.w500)),
+                            ),
                           ),
-                          child: const Text('UPDATE',
-                              style: TextStyle(fontWeight: FontWeight.w700,
-                                  fontSize: 14, letterSpacing: 0.3)),
-                        ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: () {
+                                Navigator.pop(ctx);
+                                _updateProduct(
+                                  productId: product['_id'],
+                                  title: titleCtrl.text,
+                                  price: priceCtrl.text,
+                                  originalPrice: origCtrl.text,
+                                  gram: gramCtrl.text,
+                                  description: descCtrl.text,
+                                  quantity: qtyCtrl.text,
+                                  mainImage: selectedMainImage,
+                                  extraImages: selectedExtraImages,
+                                );
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: _gold,
+                                foregroundColor: _white,
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10)),
+                                padding: const EdgeInsets.symmetric(vertical: 13),
+                              ),
+                              child: const Text('UPDATE',
+                                  style: TextStyle(fontWeight: FontWeight.w700,
+                                      fontSize: 14, letterSpacing: 0.3)),
+                            ),
+                          ),
+                        ]),
                       ),
-                    ]),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
           );
@@ -522,7 +515,6 @@ class _ProductPageState extends State<ProductPage> {
     );
   }
 
-  // ── Helpers ────────────────────────────────────────────────────────────────
   Widget _label(String t) => Text(t,
       style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700,
           color: _textMuted, letterSpacing: 1.4));
@@ -543,16 +535,18 @@ class _ProductPageState extends State<ProductPage> {
           maxLines: maxLines,
           keyboardType: isNum ? TextInputType.number : TextInputType.text,
           style: const TextStyle(color: _textDark, fontSize: 14),
+          // ✅ onTap — no auto scroll, we handle it manually
+          onTap: () {},
           decoration: InputDecoration(
             filled: true,
             fillColor: _bgField,
             contentPadding:
             const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(1),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10),
                 borderSide: const BorderSide(color: _divider)),
-            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(1),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10),
                 borderSide: const BorderSide(color: _divider)),
-            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(1),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10),
                 borderSide: const BorderSide(color: _gold, width: 1.5)),
           ),
         ),
@@ -576,26 +570,23 @@ class _ProductPageState extends State<ProductPage> {
           hintStyle: const TextStyle(color: _textMuted, fontSize: 13),
           contentPadding:
           const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(1),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10),
               borderSide: const BorderSide(color: _divider)),
-          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(1),
+          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10),
               borderSide: const BorderSide(color: _divider)),
-          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(1),
+          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10),
               borderSide: const BorderSide(color: _gold, width: 1.5)),
         ),
         items: items,
         onChanged: onChanged,
       );
 
-  // ── Main Build ─────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
       body: Column(
         children: [
-
-          // Top Bar
           Container(
             height: 64,
             color: Colors.yellow.shade700,
@@ -603,7 +594,7 @@ class _ProductPageState extends State<ProductPage> {
             child: Row(children: [
               Container(width: 3, height: 22,
                   decoration: BoxDecoration(color: _gold,
-                      borderRadius: BorderRadius.circular(1))),
+                      borderRadius: BorderRadius.circular(2))),
               const SizedBox(width: 12),
               const Text('PRODUCTS',
                   style: TextStyle(color: _textDark, fontSize: 20,
@@ -620,15 +611,13 @@ class _ProductPageState extends State<ProductPage> {
                   foregroundColor: _white,
                   elevation: 0,
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(1)),
+                      borderRadius: BorderRadius.circular(2)),
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 ),
               ),
             ]),
           ),
           Container(height: 1, color: _goldBorder.withOpacity(0.5)),
-
-          // Product List
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator(
@@ -660,7 +649,7 @@ class _ProductPageState extends State<ProductPage> {
                   margin: const EdgeInsets.only(bottom: 12),
                   decoration: BoxDecoration(
                     color: _bgCard,
-                    borderRadius: BorderRadius.circular(1),
+                    borderRadius: BorderRadius.circular(2),
                     border: Border.all(color: _divider),
                     boxShadow: [BoxShadow(
                         color: Colors.black.withOpacity(0.04),
@@ -672,11 +661,13 @@ class _ProductPageState extends State<ProductPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         ClipRRect(
-                          borderRadius: BorderRadius.circular(1),
+                          borderRadius: BorderRadius.circular(2),
                           child: Image.network(imgUrl,
-                              width: 100, height: 120, fit: BoxFit.cover,
+                              width: 100, height: 120,
+                              fit: BoxFit.cover,
                               errorBuilder: (_, __, ___) => Container(
-                                  width: 74, height: 100, color: _bgField,
+                                  width: 100, height: 120,
+                                  color: _bgField,
                                   child: const Icon(
                                       Icons.image_not_supported,
                                       color: _textMuted))),
@@ -703,7 +694,8 @@ class _ProductPageState extends State<ProductPage> {
                                 const SizedBox(width: 8),
                                 Text('₹$orig',
                                     style: const TextStyle(
-                                        color: _textMuted, fontSize: 12,
+                                        color: _textMuted,
+                                        fontSize: 12,
                                         decoration: TextDecoration.lineThrough)),
                               ]),
                               const SizedBox(height: 8),
@@ -747,7 +739,7 @@ class _ProductPageState extends State<ProductPage> {
   Widget _chip(String label) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
     decoration: BoxDecoration(color: _bgPage,
-        borderRadius: BorderRadius.circular(1)),
+        borderRadius: BorderRadius.circular(6)),
     child: Text(label, style: const TextStyle(
         color: _textSub, fontSize: 10, letterSpacing: 0.2)),
   );
@@ -759,7 +751,7 @@ class _ProductPageState extends State<ProductPage> {
         child: Container(
           width: 34, height: 34,
           decoration: BoxDecoration(color: bg,
-              borderRadius: BorderRadius.circular(1)),
+              borderRadius: BorderRadius.circular(9)),
           child: Icon(icon, color: color, size: 17),
         ),
       );
@@ -774,7 +766,7 @@ class _ProductPageState extends State<ProductPage> {
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
             color: _bgCard,
-            borderRadius: BorderRadius.circular(1),
+            borderRadius: BorderRadius.circular(16),
             boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.10),
                 blurRadius: 20, offset: const Offset(0, 6))],
           ),
@@ -800,7 +792,7 @@ class _ProductPageState extends State<ProductPage> {
                   style: OutlinedButton.styleFrom(
                     side: const BorderSide(color: _divider),
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(1)),
+                        borderRadius: BorderRadius.circular(10)),
                     padding: const EdgeInsets.symmetric(vertical: 12),
                   ),
                   child: const Text('Cancel',
@@ -819,7 +811,7 @@ class _ProductPageState extends State<ProductPage> {
                     foregroundColor: _white,
                     elevation: 0,
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(1)),
+                        borderRadius: BorderRadius.circular(10)),
                     padding: const EdgeInsets.symmetric(vertical: 12),
                   ),
                   child: const Text('Delete',
