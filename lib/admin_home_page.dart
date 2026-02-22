@@ -27,12 +27,12 @@ class AdminHomePage extends StatelessWidget {
 
     // Menu items: icon, title, subtitle, page
     final List<_MenuItem> items = [
-      _MenuItem(Icons.receipt_long_outlined,  'Orders',        'Manage customer orders',   0),
-      _MenuItem(Icons.category_outlined,      'Categories',    'Manage product categories', 1),
-      _MenuItem(Icons.layers_outlined,        'Subcategories', 'Manage subcategories',     2),
-      _MenuItem(Icons.diamond_outlined,       'Products',      'Manage jewellery items',   3),
-      _MenuItem(Icons.campaign_outlined,      'Advertisement', 'Manage banners & ads',     4),
-      _MenuItem(Icons.info_outline,           'About',         'App info & settings',      5),
+      _MenuItem(Icons.receipt_long_outlined,  'ORDER',        'Manage customer orders',   0),
+      _MenuItem(Icons.category_outlined,      'CATEGORIES',    'Manage product categories', 1),
+      _MenuItem(Icons.layers_outlined,        'SUBCATEGORIES', 'Manage subcategories',     2),
+      _MenuItem(Icons.diamond_outlined,       'PRODUCTS',      'Manage jewellery items',   3),
+      _MenuItem(Icons.campaign_outlined,      'ADVERTISEMENT', 'Manage banners & ads',     4),
+      _MenuItem(Icons.info_outline,           'ABOUT',         'App info & settings',      5),
     ];
 
     void onTap(BuildContext ctx, int index) {
@@ -66,7 +66,7 @@ class AdminHomePage extends StatelessWidget {
                 width: 38, height: 38,
                 decoration: BoxDecoration(
                   color: _gold,
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(1),
                 ),
                 child: const Icon(Icons.diamond_outlined,
                     color: _white, size: 20),
@@ -98,7 +98,7 @@ class AdminHomePage extends StatelessWidget {
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
                       color: _gold,
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(1),
                       boxShadow: [BoxShadow(
                           color: _gold.withOpacity(0.30),
                           blurRadius: 16, offset: const Offset(0, 6))],
@@ -108,7 +108,7 @@ class AdminHomePage extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: const [
-                            Text('Welcome back ',
+                            Text('WELCOME BACK ',
                                 style: TextStyle(color: _white,
                                     fontSize: 18, fontWeight: FontWeight.w700)),
                             SizedBox(height: 4),
@@ -122,7 +122,7 @@ class AdminHomePage extends StatelessWidget {
                         width: 52, height: 52,
                         decoration: BoxDecoration(
                             color: _white.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(14)),
+                            borderRadius: BorderRadius.circular(1)),
                         child: const Icon(Icons.store_outlined,
                             color: _white, size: 28),
                       ),
@@ -135,7 +135,7 @@ class AdminHomePage extends StatelessWidget {
                   Row(children: [
                     Container(width: 3, height: 16,
                         decoration: BoxDecoration(color: _gold,
-                            borderRadius: BorderRadius.circular(2))),
+                            borderRadius: BorderRadius.circular(1))),
                     const SizedBox(width: 8),
                     const Text('Quick Access',
                         style: TextStyle(color: _textDark,
@@ -161,7 +161,7 @@ class AdminHomePage extends StatelessWidget {
                           height: isMobile ? 130 : 150,
                           decoration: BoxDecoration(
                             color: _bgCard,
-                            borderRadius: BorderRadius.circular(16),
+                            borderRadius: BorderRadius.circular(1),
                             border: Border.all(color: _divider),
                             boxShadow: [BoxShadow(
                                 color: Colors.black.withOpacity(0.04),
@@ -178,7 +178,7 @@ class AdminHomePage extends StatelessWidget {
                                   width: 42, height: 42,
                                   decoration: BoxDecoration(
                                       color: _goldBorder.withOpacity(0.35),
-                                      borderRadius: BorderRadius.circular(12)),
+                                      borderRadius: BorderRadius.circular(1)),
                                   child: Icon(item.icon, color: _gold, size: 22),
                                 ),
                                 Column(
@@ -211,7 +211,7 @@ class AdminHomePage extends StatelessWidget {
                   Row(children: [
                     Container(width: 3, height: 16,
                         decoration: BoxDecoration(color: _red,
-                            borderRadius: BorderRadius.circular(2))),
+                            borderRadius: BorderRadius.circular(1))),
                     const SizedBox(width: 8),
                     const Text('Account',
                         style: TextStyle(color: _textDark,
@@ -229,7 +229,7 @@ class AdminHomePage extends StatelessWidget {
                           horizontal: 18, vertical: 16),
                       decoration: BoxDecoration(
                         color: _bgCard,
-                        borderRadius: BorderRadius.circular(14),
+                        borderRadius: BorderRadius.circular(1),
                         border: Border.all(color: _divider),
                         boxShadow: [BoxShadow(
                             color: Colors.black.withOpacity(0.04),
@@ -240,7 +240,7 @@ class AdminHomePage extends StatelessWidget {
                           width: 38, height: 38,
                           decoration: BoxDecoration(
                               color: const Color(0xFFFFF0F0),
-                              borderRadius: BorderRadius.circular(10)),
+                              borderRadius: BorderRadius.circular(1)),
                           child: const Icon(Icons.logout_rounded,
                               color: _red, size: 18),
                         ),
