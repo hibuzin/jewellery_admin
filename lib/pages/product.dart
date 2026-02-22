@@ -227,9 +227,6 @@ class _ProductPageState extends State<ProductPage> {
           return Dialog(
             backgroundColor: Colors.transparent,
             insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-              child: AnimatedPadding(
-                duration: const Duration(milliseconds: 150),
-                padding: MediaQuery.of(ctx).viewInsets,
             child: Container(
               decoration: BoxDecoration(
                 color: _bgCard,
@@ -270,7 +267,6 @@ class _ProductPageState extends State<ProductPage> {
                       ),
                     ]),
                   ),
-
 
                   // ── Body ─────────────────────────────────────────────
                   Flexible(
@@ -401,6 +397,13 @@ class _ProductPageState extends State<ProductPage> {
                           ),
 
                           const SizedBox(height: 20),
+                          Row(children: [
+                            Expanded(child: _field('ORIGINAL PRICE', origCtrl, isNum: true)),
+                            const SizedBox(width: 12),
+                            Expanded(child: _field('QUANTITY', qtyCtrl, isNum: true)),
+                          ]),
+                          const SizedBox(height: 14),
+
                           _field('TITLE', titleCtrl),
                           const SizedBox(height: 14),
 
@@ -514,7 +517,7 @@ class _ProductPageState extends State<ProductPage> {
                 ],
               ),
             ),
-          ));
+          );
         },
       ),
     );
@@ -769,7 +772,10 @@ class _ProductPageState extends State<ProductPage> {
       builder: (ctx) => Dialog(
         backgroundColor: Colors.transparent,
         child: Container(
-          padding: const EdgeInsets.all(24),
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(ctx).size.height * 0.8, // Max 80% of screen height
+          ),
+
           decoration: BoxDecoration(
             color: _bgCard,
             borderRadius: BorderRadius.circular(1),
