@@ -227,296 +227,294 @@ class _ProductPageState extends State<ProductPage> {
           return Dialog(
             backgroundColor: Colors.transparent,
             insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-            child: Padding(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(ctx).viewInsets.bottom,
+              child: AnimatedPadding(
+                duration: const Duration(milliseconds: 150),
+                padding: MediaQuery.of(ctx).viewInsets,
+            child: Container(
+              decoration: BoxDecoration(
+                color: _bgCard,
+                borderRadius: BorderRadius.circular(2),
+                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.10),
+                    blurRadius: 30, offset: const Offset(0, 8))],
               ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
 
-              child: Container(
-                decoration: BoxDecoration(
-                  color: _bgCard,
-                  borderRadius: BorderRadius.circular(2),
-                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.10),
-                      blurRadius: 30, offset: const Offset(0, 8))],
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-
-                    // ── Header ───────────────────────────────────────────
-                    Container(
-                      padding: const EdgeInsets.fromLTRB(20, 16, 16, 16),
-                      decoration: const BoxDecoration(
-                          border: Border(bottom: BorderSide(color: _divider))),
-                      child: Row(children: [
-                        Container(
-                          width: 36, height: 36,
-                          decoration: BoxDecoration(
-                              color: _goldBorder.withOpacity(0.4),
+                  // ── Header ───────────────────────────────────────────
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(20, 16, 16, 16),
+                    decoration: const BoxDecoration(
+                        border: Border(bottom: BorderSide(color: _divider))),
+                    child: Row(children: [
+                      Container(
+                        width: 36, height: 36,
+                        decoration: BoxDecoration(
+                            color: _goldBorder.withOpacity(0.4),
+                            borderRadius: BorderRadius.circular(1)),
+                        child: const Icon(Icons.edit_outlined, color: _gold, size: 18),
+                      ),
+                      const SizedBox(width: 12),
+                      const Text('Edit Product',
+                          style: TextStyle(color: _textDark, fontSize: 16,
+                              fontWeight: FontWeight.w700)),
+                      const Spacer(),
+                      GestureDetector(
+                        onTap: () => Navigator.pop(ctx),
+                        child: Container(
+                          width: 30, height: 30,
+                          decoration: BoxDecoration(color: _bgField,
                               borderRadius: BorderRadius.circular(1)),
-                          child: const Icon(Icons.edit_outlined, color: _gold, size: 18),
+                          child: const Icon(Icons.close, color: _textSub, size: 16),
                         ),
-                        const SizedBox(width: 12),
-                        const Text('Edit Product',
-                            style: TextStyle(color: _textDark, fontSize: 16,
-                                fontWeight: FontWeight.w700)),
-                        const Spacer(),
-                        GestureDetector(
-                          onTap: () => Navigator.pop(ctx),
-                          child: Container(
-                            width: 30, height: 30,
-                            decoration: BoxDecoration(color: _bgField,
-                                borderRadius: BorderRadius.circular(1)),
-                            child: const Icon(Icons.close, color: _textSub, size: 16),
-                          ),
-                        ),
-                      ]),
-                    ),
+                      ),
+                    ]),
+                  ),
 
-                    // ── Body ─────────────────────────────────────────────
-                    Flexible(
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.all(20),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
 
-                            // Main Image
-                            _label('MAIN IMAGE'),
-                            const SizedBox(height: 10),
-                            Center(
-                              child: GestureDetector(
-                                onTap: () async {
-                                  final p = await ImagePicker()
-                                      .pickImage(source: ImageSource.gallery);
-                                  if (p != null) set(() => selectedMainImage = p);
-                                },
-                                child: Stack(
-                                  alignment: Alignment.bottomRight,
-                                  children: [
-                                    // ✅ show picked image or existing network image
-                                    Container(
-                                      width: 88, height: 88,
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        border: Border.all(color: _goldBorder, width: 2.5),
-                                      ),
-                                      child: ClipOval(
-                                        child: selectedMainImage != null
-                                            ? _xfilePreview(selectedMainImage!, size: 88)
-                                            : Image.network(imageUrl,
-                                            width: 88, height: 88,
-                                            fit: BoxFit.cover),
-                                      ),
+                  // ── Body ─────────────────────────────────────────────
+                  Flexible(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+
+                          // Main Image
+                          _label('MAIN IMAGE'),
+                          const SizedBox(height: 10),
+                          Center(
+                            child: GestureDetector(
+                              onTap: () async {
+                                final p = await ImagePicker()
+                                    .pickImage(source: ImageSource.gallery);
+                                if (p != null) set(() => selectedMainImage = p);
+                              },
+                              child: Stack(
+                                alignment: Alignment.bottomRight,
+                                children: [
+                                  // ✅ show picked image or existing network image
+                                  Container(
+                                    width: 88, height: 88,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      border: Border.all(color: _goldBorder, width: 2.5),
                                     ),
-                                    Container(
-                                      width: 26, height: 26,
-                                      decoration: BoxDecoration(
-                                          color: _gold,
-                                          shape: BoxShape.circle,
-                                          border: Border.all(color: _white, width: 2)),
-                                      child: const Icon(Icons.edit, color: _white, size: 12),
+                                    child: ClipOval(
+                                      child: selectedMainImage != null
+                                          ? _xfilePreview(selectedMainImage!, size: 88)
+                                          : Image.network(imageUrl,
+                                          width: 88, height: 88,
+                                          fit: BoxFit.cover),
+                                    ),
+                                  ),
+                                  Container(
+                                    width: 26, height: 26,
+                                    decoration: BoxDecoration(
+                                        color: _gold,
+                                        shape: BoxShape.circle,
+                                        border: Border.all(color: _white, width: 2)),
+                                    child: const Icon(Icons.edit, color: _white, size: 12),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+
+                          const SizedBox(height: 20),
+
+                          // Extra Images
+                          _label('EXTRA IMAGES'),
+                          const SizedBox(height: 10),
+
+                          // Existing server images
+                          if (existingExtras.isNotEmpty)
+                            SizedBox(
+                              height: 66,
+                              child: ListView.builder(
+                                scrollDirection: Axis.horizontal,
+                                itemCount: existingExtras.length,
+                                itemBuilder: (_, i) => Padding(
+                                  padding: const EdgeInsets.only(right: 8),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(1),
+                                    child: Image.network(existingExtras[i],
+                                        width: 62, height: 62, fit: BoxFit.cover),
+                                  ),
+                                ),
+                              ),
+                            ),
+
+                          // Newly picked extra images
+                          if (selectedExtraImages.isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            SizedBox(
+                              height: 66,
+                              child: ListView.builder(
+                                scrollDirection: Axis.horizontal,
+                                itemCount: selectedExtraImages.length,
+                                itemBuilder: (_, i) => Stack(
+                                  children: [
+                                    Padding(
+                                      padding: const EdgeInsets.only(right: 8),
+
+                                      child: _xfilePreview(selectedExtraImages[i]),
+                                    ),
+                                    Positioned(
+                                      top: 0, right: 4,
+                                      child: GestureDetector(
+                                        onTap: () => set(() =>
+                                            selectedExtraImages.removeAt(i)),
+                                        child: Container(
+                                          width: 18, height: 18,
+                                          decoration: const BoxDecoration(
+                                              color: _red, shape: BoxShape.circle),
+                                          child: const Icon(Icons.close,
+                                              color: _white, size: 11),
+                                        ),
+                                      ),
                                     ),
                                   ],
                                 ),
                               ),
                             ),
-
-                            const SizedBox(height: 20),
-
-                            // Extra Images
-                            _label('EXTRA IMAGES'),
-                            const SizedBox(height: 10),
-
-                            // Existing server images
-                            if (existingExtras.isNotEmpty)
-                              SizedBox(
-                                height: 66,
-                                child: ListView.builder(
-                                  scrollDirection: Axis.horizontal,
-                                  itemCount: existingExtras.length,
-                                  itemBuilder: (_, i) => Padding(
-                                    padding: const EdgeInsets.only(right: 8),
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(1),
-                                      child: Image.network(existingExtras[i],
-                                          width: 62, height: 62, fit: BoxFit.cover),
-                                    ),
-                                  ),
-                                ),
-                              ),
-
-                            // Newly picked extra images
-                            if (selectedExtraImages.isNotEmpty) ...[
-                              const SizedBox(height: 8),
-                              SizedBox(
-                                height: 66,
-                                child: ListView.builder(
-                                  scrollDirection: Axis.horizontal,
-                                  itemCount: selectedExtraImages.length,
-                                  itemBuilder: (_, i) => Stack(
-                                    children: [
-                                      Padding(
-                                        padding: const EdgeInsets.only(right: 8),
-
-                                        child: _xfilePreview(selectedExtraImages[i]),
-                                      ),
-                                      Positioned(
-                                        top: 0, right: 4,
-                                        child: GestureDetector(
-                                          onTap: () => set(() =>
-                                              selectedExtraImages.removeAt(i)),
-                                          child: Container(
-                                            width: 18, height: 18,
-                                            decoration: const BoxDecoration(
-                                                color: _red, shape: BoxShape.circle),
-                                            child: const Icon(Icons.close,
-                                                color: _white, size: 11),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ],
-
-                            const SizedBox(height: 10),
-                            OutlinedButton.icon(
-                              onPressed: () async {
-                                final picked = await ImagePicker().pickMultiImage();
-                                if (picked.isNotEmpty)
-                                  set(() => selectedExtraImages.addAll(picked));
-                              },
-                              icon: const Icon(Icons.add_photo_alternate_outlined,
-                                  size: 16, color: _gold),
-                              label: const Text('Add Extra Images',
-                                  style: TextStyle(color: _gold, fontSize: 13)),
-                              style: OutlinedButton.styleFrom(
-                                side: const BorderSide(color: _goldBorder),
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(1)),
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 14, vertical: 10),
-                              ),
-                            ),
-
-                            const SizedBox(height: 20),
-                            _field('TITLE', titleCtrl),
-                            const SizedBox(height: 14),
-
-                            _label('CATEGORY'),
-                            const SizedBox(height: 8),
-                            _isCategoryLoading
-                                ? _miniLoader()
-                                : _dropdown(
-                              value: _selectedCategoryId,
-                              hint: 'Select Category',
-                              items: _categories.map((c) => DropdownMenuItem(
-                                  value: c['_id'].toString(),
-                                  child: Text(c['name'].toString()))).toList(),
-                              onChanged: (val) {
-                                set(() {
-                                  _selectedCategoryId = val;
-                                  _selectedSubcategoryId = null;
-                                  _subcategoriesList = [];
-                                });
-                                _fetchSubcategoriesByCategory(val!, set);
-                              },
-                            ),
-
-                            const SizedBox(height: 14),
-
-                            _label('SUBCATEGORY'),
-                            const SizedBox(height: 8),
-                            _isSubcategoryLoading
-                                ? _miniLoader()
-                                : _dropdown(
-                              value: _selectedSubcategoryId,
-                              hint: 'Select Subcategory',
-                              items: _subcategoriesList.map((s) => DropdownMenuItem(
-                                  value: s['_id'].toString(),
-                                  child: Text(s['name'].toString()))).toList(),
-                              onChanged: (val) =>
-                                  set(() => _selectedSubcategoryId = val),
-                            ),
-
-                            const SizedBox(height: 14),
-                            Row(children: [
-                              Expanded(child: _field('PRICE', priceCtrl, isNum: true)),
-                              const SizedBox(width: 12),
-                              Expanded(child: _field('ORIGINAL PRICE', origCtrl, isNum: true)),
-                            ]),
-                            const SizedBox(height: 14),
-                            Row(children: [
-                              Expanded(child: _field('GRAM', gramCtrl, isNum: true)),
-                              const SizedBox(width: 12),
-                              Expanded(child: _field('QUANTITY', qtyCtrl, isNum: true)),
-                            ]),
-                            const SizedBox(height: 14),
-                            _field('DESCRIPTION', descCtrl, maxLines: 3),
                           ],
-                        ),
+
+                          const SizedBox(height: 10),
+                          OutlinedButton.icon(
+                            onPressed: () async {
+                              final picked = await ImagePicker().pickMultiImage();
+                              if (picked.isNotEmpty)
+                                set(() => selectedExtraImages.addAll(picked));
+                            },
+                            icon: const Icon(Icons.add_photo_alternate_outlined,
+                                size: 16, color: _gold),
+                            label: const Text('Add Extra Images',
+                                style: TextStyle(color: _gold, fontSize: 13)),
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(color: _goldBorder),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(1)),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 14, vertical: 10),
+                            ),
+                          ),
+
+                          const SizedBox(height: 20),
+                          _field('TITLE', titleCtrl),
+                          const SizedBox(height: 14),
+
+                          _label('CATEGORY'),
+                          const SizedBox(height: 8),
+                          _isCategoryLoading
+                              ? _miniLoader()
+                              : _dropdown(
+                            value: _selectedCategoryId,
+                            hint: 'Select Category',
+                            items: _categories.map((c) => DropdownMenuItem(
+                                value: c['_id'].toString(),
+                                child: Text(c['name'].toString()))).toList(),
+                            onChanged: (val) {
+                              set(() {
+                                _selectedCategoryId = val;
+                                _selectedSubcategoryId = null;
+                                _subcategoriesList = [];
+                              });
+                              _fetchSubcategoriesByCategory(val!, set);
+                            },
+                          ),
+
+                          const SizedBox(height: 14),
+
+                          _label('SUBCATEGORY'),
+                          const SizedBox(height: 8),
+                          _isSubcategoryLoading
+                              ? _miniLoader()
+                              : _dropdown(
+                            value: _selectedSubcategoryId,
+                            hint: 'Select Subcategory',
+                            items: _subcategoriesList.map((s) => DropdownMenuItem(
+                                value: s['_id'].toString(),
+                                child: Text(s['name'].toString()))).toList(),
+                            onChanged: (val) =>
+                                set(() => _selectedSubcategoryId = val),
+                          ),
+
+                          const SizedBox(height: 14),
+                          Row(children: [
+                            Expanded(child: _field('PRICE', priceCtrl, isNum: true)),
+                            const SizedBox(width: 12),
+                            Expanded(child: _field('ORIGINAL PRICE', origCtrl, isNum: true)),
+                          ]),
+                          const SizedBox(height: 14),
+                          Row(children: [
+                            Expanded(child: _field('GRAM', gramCtrl, isNum: true)),
+                            const SizedBox(width: 12),
+                            Expanded(child: _field('QUANTITY', qtyCtrl, isNum: true)),
+                          ]),
+                          const SizedBox(height: 14),
+                          _field('DESCRIPTION', descCtrl, maxLines: 3),
+                        ],
                       ),
                     ),
+                  ),
 
-                    // ── Footer ───────────────────────────────────────────
-                    Container(
-                      padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
-                      decoration: const BoxDecoration(
-                          border: Border(top: BorderSide(color: _divider))),
-                      child: Row(children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: () => Navigator.pop(ctx),
-                            style: OutlinedButton.styleFrom(
-                              side: const BorderSide(color: _divider),
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(1)),
-                              padding: const EdgeInsets.symmetric(vertical: 13),
-                            ),
-                            child: const Text('CANCEL',
-                                style: TextStyle(color: _textSub,
-                                    fontWeight: FontWeight.w500)),
+                  // ── Footer ───────────────────────────────────────────
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+                    decoration: const BoxDecoration(
+                        border: Border(top: BorderSide(color: _divider))),
+                    child: Row(children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(ctx),
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: _divider),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(1)),
+                            padding: const EdgeInsets.symmetric(vertical: 13),
                           ),
+                          child: const Text('CANCEL',
+                              style: TextStyle(color: _textSub,
+                                  fontWeight: FontWeight.w500)),
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: () {
-                              Navigator.pop(ctx);
-                              _updateProduct(
-                                productId: product['_id'],
-                                title: titleCtrl.text,
-                                price: priceCtrl.text,
-                                originalPrice: origCtrl.text,
-                                gram: gramCtrl.text,
-                                description: descCtrl.text,
-                                quantity: qtyCtrl.text,
-                                mainImage: selectedMainImage,
-                                extraImages: selectedExtraImages,
-                              );
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: _gold,
-                              foregroundColor: _white,
-                              elevation: 0,
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(1)),
-                              padding: const EdgeInsets.symmetric(vertical: 13),
-                            ),
-                            child: const Text('UPDATE',
-                                style: TextStyle(fontWeight: FontWeight.w700,
-                                    fontSize: 14, letterSpacing: 0.3)),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            Navigator.pop(ctx);
+                            _updateProduct(
+                              productId: product['_id'],
+                              title: titleCtrl.text,
+                              price: priceCtrl.text,
+                              originalPrice: origCtrl.text,
+                              gram: gramCtrl.text,
+                              description: descCtrl.text,
+                              quantity: qtyCtrl.text,
+                              mainImage: selectedMainImage,
+                              extraImages: selectedExtraImages,
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _gold,
+                            foregroundColor: _white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(1)),
+                            padding: const EdgeInsets.symmetric(vertical: 13),
                           ),
+                          child: const Text('UPDATE',
+                              style: TextStyle(fontWeight: FontWeight.w700,
+                                  fontSize: 14, letterSpacing: 0.3)),
                         ),
-                      ]),
-                    ),
-                  ],
-                ),
+                      ),
+                    ]),
+                  ),
+                ],
               ),
             ),
-          );
+          ));
         },
       ),
     );
