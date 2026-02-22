@@ -271,7 +271,13 @@ class _ProductPageState extends State<ProductPage> {
                   // ── Body ─────────────────────────────────────────────
                   Flexible(
                     child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(20),
+                      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                      padding: EdgeInsets.fromLTRB(
+                        20,
+                        20,
+                        20,
+                        MediaQuery.of(ctx).viewInsets.bottom + 20,
+                      ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
